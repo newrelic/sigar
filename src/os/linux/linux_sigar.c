@@ -1180,7 +1180,7 @@ static int resolve_symlink (const char *input, char *output, size_t output_size)
         if (size < 0) {
             return errno;
         }
-        temp[output_size-1] = '\0';
+        output[output_size-1] = '\0';
         return SIGAR_OK;
     }
     else {
