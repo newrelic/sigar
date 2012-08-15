@@ -2913,14 +2913,7 @@ sigar_net_interface_list_get(sigar_t *sigar,
     MIB_IFTABLE *ift;
     int i, status;
     int lo=0, eth=0, la=0;
-    PIP_ADAPTER_ADDRESSES address_list = NULL;
     ULONG size = 0;
-
-    status = sigar_get_adapters_addresses(sigar, AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, &address_list, &size);
-
-    if (status != SIGAR_OK) {
-        address_list = NULL;
-    }
 
     if (!sigar->netif_mib_rows) {
         sigar->netif_mib_rows =
@@ -2933,9 +2926,6 @@ sigar_net_interface_list_get(sigar_t *sigar,
     }
 
     if ((status = sigar_get_if_table(sigar, &ift)) != SIGAR_OK) {
-        if (address_list) {
-            free(address_list);
-        }
         return status;
     }
 
@@ -2963,7 +2953,8 @@ sigar_net_interface_list_get(sigar_t *sigar,
         }
         else if (ifr->dwType == MIB_IF_TYPE_LOOPBACK) {
             if (!sigar->netif_name_short) {
-                status = sigar_net_interface_name_get(sigar, ifr, address_list, name);
+                SIGAR_W2A(ifr->wszName, name, sizeof(name));
+                status = SIGAR_OK;
             }
             if (status != SIGAR_OK) {
                 sprintf(name, "lo%d", lo++);
@@ -2981,7 +2972,8 @@ sigar_net_interface_list_get(sigar_t *sigar,
 
             if (!sigar->netif_name_short)
             {
-                status = sigar_net_interface_name_get(sigar, ifr, address_list, name);
+                SIGAR_W2A(ifr->wszName, name, sizeof(name));
+                status = SIGAR_OK;
             }
 
             if (status != SIGAR_OK) {
@@ -3013,10 +3005,6 @@ sigar_net_interface_list_get(sigar_t *sigar,
         if (!entry->value) {
             entry->value = sigar_strdup(name);
         }
-    }
-
-    if (address_list != NULL) {
-        free(address_list);
     }
 
     return SIGAR_OK;
