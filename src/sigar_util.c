@@ -392,6 +392,7 @@ sigar_iodev_t *sigar_iodev_get(sigar_t *sigar,
     if (is_dev) {
         sigar_iodev_t *iodev;
         entry->value = iodev = malloc(sizeof(*iodev));
+        if (iodev == NULL) return NULL;
         SIGAR_ZERO(iodev);
         SIGAR_SSTRCPY(iodev->name, dirname);
         if (debug) {
@@ -434,6 +435,7 @@ sigar_iodev_t *sigar_iodev_get(sigar_t *sigar,
             if (SIGAR_NAME_IS_DEV(fsp->dev_name)) {
                 sigar_iodev_t *iodev;
                 ent->value = iodev = malloc(sizeof(*iodev));
+                if (iodev == NULL) return NULL;
                 SIGAR_ZERO(iodev);
                 iodev->is_partition = 1;
                 SIGAR_SSTRCPY(iodev->name, fsp->dev_name);
