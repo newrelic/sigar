@@ -289,6 +289,9 @@ int sigar_proc_list_create(sigar_proc_list_t *proclist)
     proclist->size = SIGAR_PROC_LIST_MAX;
     proclist->data = malloc(sizeof(*(proclist->data)) *
                             proclist->size);
+    if (proclist->data == NULL) {
+      return ENOMEM;
+    }
     return SIGAR_OK;
 }
 
@@ -319,8 +322,11 @@ SIGAR_DECLARE(int) sigar_proc_list_get(sigar_t *sigar,
     if (proclist == NULL) {
         /* internal re-use */
         if (sigar->pids == NULL) {
+            int status;
             sigar->pids = malloc(sizeof(*sigar->pids));
-            sigar_proc_list_create(sigar->pids);
+            if (sigar->pids == NULL) return ENOMEM;
+            status = sigar_proc_list_create(sigar->pids);
+            if (status != SIGAR_OK) return status;
         }
         else {
             sigar->pids->number = 0;
@@ -328,7 +334,8 @@ SIGAR_DECLARE(int) sigar_proc_list_get(sigar_t *sigar,
         proclist = sigar->pids;
     }
     else {
-        sigar_proc_list_create(proclist);
+        int status = sigar_proc_list_create(proclist);
+        if (status != SIGAR_OK) return status;
     }
 
     return sigar_os_proc_list_get(sigar, proclist);
