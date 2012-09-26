@@ -1195,7 +1195,6 @@ static int get_iostat_sys(sigar_t *sigar,
                           sigar_disk_usage_t *disk,
                           sigar_iodev_t **iodev)
 {
-    static const char dev_mapper[] = "/dev/mapper/";
     char stat[1025], dev[1025], real_name[1025];
     char *partition, *ptr, *fsdev;
     int status;
