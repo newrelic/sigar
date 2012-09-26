@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
+#include <libgen.h>
 
 #include "sigar.h"
 #include "sigar_private.h"
@@ -1149,34 +1150,94 @@ int sigar_file_system_list_get(sigar_t *sigar,
 #define ST_MAJOR(sb) major((sb).st_rdev)
 #define ST_MINOR(sb) minor((sb).st_rdev)
 
+static int check_file_exists (const char *path)
+{
+    struct stat st;
+
+    if (stat(path, &st) < 0) {
+        return errno;
+    }
+
+    /* XXX do we care about character devices too? */
+    return SIGAR_OK;
+}
+
+static int is_symlink (const char *path)
+{
+    struct stat st;
+
+    if (lstat(path, &st) < 0) {
+        return errno;
+    }
+
+    return S_ISLNK(st.st_mode);
+}
+
+static int resolve_symlink (const char *input, char *output, size_t output_size)
+{
+    if (is_symlink (input)) {
+        ssize_t size = readlink (input, output, output_size);
+        if (size < 0) {
+            return errno;
+        }
+        temp[output_size-1] = '\0';
+        return SIGAR_OK;
+    }
+    else {
+        strncpy (output, input, output_size);
+        output[output_size-1] = '\0';
+        return SIGAR_OK;
+    }
+}
+
 static int get_iostat_sys(sigar_t *sigar,
                           const char *dirname,
                           sigar_disk_usage_t *disk,
                           sigar_iodev_t **iodev)
 {
-    char stat[1025], dev[1025];
-    char *name, *ptr, *fsdev;
-    int partition, status;
+    static const char dev_mapper[] = "/dev/mapper/";
+    char stat[1025], dev[1025], real_name[1025];
+    char *partition, *ptr, *fsdev;
+    int status;
 
     if (!(*iodev = sigar_iodev_get(sigar, dirname))) {
         return ENXIO;
     }
 
-    name = fsdev = (*iodev)->name;
+    /* Devices in /dev/mapper are symlinks on CloudLinux (and probably RHEL)
+     * Resolve symlinks to get at the "real" name of the device.
+     */
+    status = resolve_symlink ((*iodev)->name, real_name, sizeof(real_name));
 
-    if (SIGAR_NAME_IS_DEV(name)) {
-        name += SSTRLEN(SIGAR_DEV_PREFIX); /* strip "/dev/" */
+    if (status != SIGAR_OK) {
+        return status;
     }
 
-    while (!sigar_isdigit(*fsdev)) {
-        fsdev++;
+    fsdev = basename (real_name);
+
+    /* first, assume we have a device name */
+    snprintf(stat, sizeof(stat), SYS_BLOCK "/%s/stat", fsdev);
+    if (check_file_exists (stat) != SIGAR_OK) {
+        /* okay, so it's not a device name. is it a partition name? */
+        const char *partition = fsdev;
+        while (*fsdev && !sigar_isdigit(*fsdev)) {
+            fsdev++;
+        }
+        if (*fsdev) {
+            char ch;
+            /* kinda smells like a partition name, so extract the device name. */
+            ch = *fsdev;
+            *fsdev = '\0';
+            strncpy (dev, partition, sizeof(dev));
+            dev[sizeof(dev)-1] = '\0';
+            *fsdev = ch;
+            snprintf(stat, sizeof(stat), SYS_BLOCK "/%s/%s/stat", dev, partition);
+        }
+        else {
+            /* not a device name, not a partition name. ergo: wat? */
+            return EINVAL;
+        }
     }
-
-    partition = strtoul(fsdev, NULL, 0);
-    *fsdev = '\0';
-
-    snprintf(stat, sizeof(stat),
-             SYS_BLOCK "/%s/%s%d/stat", name, name, partition);
 
     status = sigar_file2str(stat, dev, sizeof(dev));
     if (status != SIGAR_OK) {
