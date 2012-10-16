@@ -106,14 +106,14 @@ int sigar_group_name_get(sigar_t *sigar, int gid, char *buf, int buflen)
                 if (overflow || limit_exceeded) {
                     /* pretend that getgrgid_r failed gracefully */
                     gr = NULL;
-                    break;
+                    goto done;
                 }
                 size += R_SIZE_MAX;
                 temp = realloc (buffer, size);
                 if (temp == NULL) {
                     /* pretend that getgrgid_r failed gracefully */
                     gr = NULL;
-                    break;
+                    goto done;
                 }
                 buffer = temp;
                 continue;
@@ -122,7 +122,11 @@ int sigar_group_name_get(sigar_t *sigar, int gid, char *buf, int buflen)
             free (buffer);
             return errno;
         }
+        goto done;
     }
+
+done:
+
 # else
     if ((gr = getgrgid(gid)) == NULL) {
         return errno;
