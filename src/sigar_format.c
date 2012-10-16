@@ -66,6 +66,10 @@ int sigar_user_name_get(sigar_t *sigar, int uid, char *buf, int buflen)
     return SIGAR_OK;
 }
 
+#define SIGAR_DEFAULT_MAX_GROUP_SIZE (16 * 1024)
+
+static const char SIGAR_MAX_GROUP_SIZE[] = "SIGAR_MAX_GROUP_SIZE";
+
 int sigar_group_name_get(sigar_t *sigar, int gid, char *buf, int buflen)
 {
     struct group *gr;
@@ -73,10 +77,51 @@ int sigar_group_name_get(sigar_t *sigar, int gid, char *buf, int buflen)
 
 # ifdef HAVE_GETGRGID_R
     struct group grbuf;
-    char buffer[R_SIZE_MAX];
+    size_t max_size = SIGAR_DEFAULT_MAX_GROUP_SIZE;
+    size_t size = R_SIZE_MAX;
+    char *buffer = malloc (size);
+    if (buffer == NULL) {
+      return ENOMEM;
+    }
 
-    if (getgrgid_r(gid, &grbuf, buffer, sizeof(buffer), &gr) != 0) {
-        return errno;
+    if (getenv (SIGAR_MAX_GROUP_SIZE) != NULL) {
+        max_size = atol (getenv(SIGAR_MAX_GROUP_SIZE));
+        if (max_size == 0) {
+            max_size = SIGAR_DEFAULT_MAX_GROUP_SIZE;
+        }
+    }
+
+    /* Keep calling getgrgid_r until we have enough buffer space.
+     *
+     * http://tomlee.co/2012/10/problems-with-large-linux-unix-groups-and-getgrgid_r-getgrnam_r/
+     * http://marc.info/?l=linux-nfsv4&m=116311577732733&w=2
+     */
+    for (;;) {
+        if (getgrgid_r(gid, &grbuf, buffer, size, &gr) != 0) {
+            /* ERANGE -> not enough buffer space */
+            if (errno == ERANGE) {
+                char *temp;
+                int overflow = (size + R_SIZE_MAX) < size;
+                int limit_exceeded = (size + R_SIZE_MAX) > max_size;
+                if (overflow || limit_exceeded) {
+                    /* pretend that getgrgid_r failed gracefully */
+                    gr = NULL;
+                    break;
+                }
+                size += R_SIZE_MAX;
+                temp = realloc (buffer, size);
+                if (temp == NULL) {
+                    /* pretend that getgrgid_r failed gracefully */
+                    gr = NULL;
+                    break;
+                }
+                buffer = temp;
+                continue;
+            }
+            /* everything else is treated as an unrecoverable error */
+            free (buffer);
+            return errno;
+        }
     }
 # else
     if ((gr = getgrgid(gid)) == NULL) {
@@ -88,15 +133,17 @@ int sigar_group_name_get(sigar_t *sigar, int gid, char *buf, int buflen)
         strncpy(buf, gr->gr_name, buflen);
     }
     else {
-        /* seen on linux.. apache httpd.conf has:
-         * Group #-1
-         * results in uid == -1 and gr == NULL.
-         * wtf getgrgid_r doesnt fail instead? 
+        /* getgrgid_r sets gr to NULL if the gid can't be resolved.
+         *
+         * In this case, use the gid.
          */
-        sprintf(buf, "%d", gid);
+        snprintf(buf, buflen, "%d", gid);
     }
     buf[buflen-1] = '\0';
 
+# ifdef HAVE_GETGRGID_R
+    free (buffer);
+#endif
     return SIGAR_OK;
 }
 
