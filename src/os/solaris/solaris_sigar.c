@@ -205,7 +205,7 @@ typedef struct sigar_vmusage64 {
 } sigar_vmusage64_t;
 
 /* getvmusage() can be CPU expensive; throttle calls to secs: */
-#define VMUSAGE_INTERVAL       60
+#define VMUSAGE_INTERVAL       10
 
 static int zone_mem_get(sigar_t *sigar, sigar_mem_t *mem)
 {
