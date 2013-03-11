@@ -41,6 +41,7 @@ typedef unsigned long long int u_int64_t;
 
 #include <kstat.h>
 #include <procfs.h>
+#include <zone.h>
 
 #include "get_mib2.h"
 
@@ -132,6 +133,11 @@ struct sigar_t {
 
     int solaris_version;
     int use_ucb_ps;
+
+    int joyent;
+    zoneid_t zoneid;
+    char *zonenm;
+    char *zonenm_short;
 
     kstat_ctl_t *kc;
 

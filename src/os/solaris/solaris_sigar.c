@@ -68,6 +68,7 @@ int sigar_os_open(sigar_t **sig)
     int i, status;
     struct utsname name;
     char *ptr;
+    char zonenm[256];
 
     sigar = malloc(sizeof(*sigar));
     *sig = sigar;
@@ -76,6 +77,25 @@ int sigar_os_open(sigar_t **sig)
     sigar->log_impl = NULL;
     sigar->log_data = NULL;
 
+    sigar->zoneid = getzoneid ();
+    if (sigar->zoneid < 0) {
+      sigar->zoneid = 0;
+      sigar->zonenm = strdup ("unknown");
+      sigar->zonenm_short = strdup ("unknown");
+    } else {
+      getzonenamebyid (sigar->zoneid, zonenm, sizeof (zonenm));
+      sigar->zonenm = strdup (zonenm);
+      ptr = strchr (zonenm, '-');
+      if (ptr) {
+        *ptr = 0;
+      }
+      ptr = strchr (zonenm, ':');
+      if (ptr) {
+        *ptr = 0;
+      }
+      sigar->zonenm_short = strdup (zonenm);
+    }
+
     uname(&name);
     if ((ptr = strchr(name.release, '.'))) {
         ptr++;
@@ -83,6 +103,12 @@ int sigar_os_open(sigar_t **sig)
     }
     else {
         sigar->solaris_version = 6;
+    }
+
+    if (0 == strncmp (name.version, "joyent", 6)) {
+      sigar->joyent = 1;
+    } else {
+      sigar->joyent = 0;
     }
 
     if ((ptr = getenv("SIGAR_USE_UCB_PS"))) {
@@ -176,6 +202,8 @@ int sigar_os_close(sigar_t *sigar)
     if (sigar->pargs) {
         sigar_cache_destroy(sigar->pargs);
     }
+    free (sigar->zonenm);
+    free (sigar->zonenm_short);
     free(sigar);
     return SIGAR_OK;
 }
@@ -1452,7 +1480,11 @@ int sigar_file_system_list_get(sigar_t *sigar,
         fsp = &fslist->data[fslist->number++];
 
         SIGAR_SSTRCPY(fsp->dir_name, ent.mnt_mountp);
-        SIGAR_SSTRCPY(fsp->dev_name, ent.mnt_special);
+        if (sigar->joyent) {
+          SIGAR_SSTRCPY(fsp->dev_name, sigar->zonenm_short);
+        } else {
+          SIGAR_SSTRCPY(fsp->dev_name, ent.mnt_special);
+        }
         SIGAR_SSTRCPY(fsp->sys_type_name, ent.mnt_fstype);
         SIGAR_SSTRCPY(fsp->options, ent.mnt_mntopts);
         sigar_fs_type_init(fsp);
@@ -1719,12 +1751,50 @@ int sigar_disk_usage_get(sigar_t *sigar, const char *name,
                          sigar_disk_usage_t *disk)
 {
     kstat_t *ksp;
-    int status;
+    int i, status;
+    char znm[32];
     iodev_t *iodev = NULL;
     sigar_cache_entry_t *ent;
     sigar_uint64_t id;
 
     SIGAR_DISK_STATS_INIT(disk);
+
+    if (sigar->joyent) {
+      strncpy (znm, sigar->zonenm, 30);
+      znm[30] = 0;
+
+      ksp = kstat_lookup (sigar->kc, "zone_vfs", -1, znm);
+      if (ksp) {
+        kstat_read (sigar->kc, ksp, NULL);
+        if (KSTAT_TYPE_NAMED != ksp->ks_type) {
+          return ENXIO;
+        }
+
+        for (i = 0; i < ksp->ks_ndata; i++) {
+          kstat_named_t *kn = &((kstat_named_t *)ksp->ks_data)[i];
+
+          if (strEQ (kn->name, "nread")) {
+            disk->read_bytes = kn->value.ui64;
+          } else if (strEQ (kn->name, "reads")) {
+            disk->reads = kn->value.ui64;
+          } else if (strEQ (kn->name, "rlentime")) {
+            disk->rtime = kn->value.ui64;
+          } else if (strEQ (kn->name, "nwritten")) {
+            disk->write_bytes = kn->value.ui64;
+          } else if (strEQ (kn->name, "writes")) {
+            disk->writes = kn->value.ui64;
+          } else if (strEQ (kn->name, "wlentime")) {
+            disk->qtime = disk->wtime = kn->value.ui64;
+          }
+        }
+
+        disk->time = disk->rtime + disk->wtime;
+        disk->snaptime = ksp->ks_snaptime;
+        return SIGAR_OK;
+      } else {
+        return ENXIO;
+      }
+    }
 
     if (!sigar->fsdev) {
         if (create_fsdev_cache(sigar) != SIGAR_OK) {
@@ -1843,7 +1913,9 @@ int sigar_file_system_usage_get(sigar_t *sigar,
 
     fsusage->use_percent = sigar_file_system_usage_calc_used(sigar, fsusage);
 
-    sigar_disk_usage_get(sigar, dirname, &fsusage->disk);
+    if (!sigar->joyent) {
+      sigar_disk_usage_get(sigar, dirname, &fsusage->disk);
+    }
 
     return SIGAR_OK;
 }
