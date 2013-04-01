@@ -233,7 +233,7 @@ typedef struct sigar_vmusage64 {
 } sigar_vmusage64_t;
 
 /* getvmusage() can be CPU expensive; throttle calls to secs: */
-#define VMUSAGE_INTERVAL       10
+#define VMUSAGE_INTERVAL       20
 
 static int zone_mem_get(sigar_t *sigar, sigar_mem_t *mem)
 {
@@ -515,7 +515,7 @@ int sigar_cpu_get(sigar_t *sigar, sigar_cpu_t *cpu)
     return SIGAR_OK;
 }
 
-int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
+static int sigar_cpu_list_get_global(sigar_t *sigar, sigar_cpu_list_t *cpulist)
 {
     kstat_ctl_t *kc = sigar->kc; 
     kstat_t *ksp;
@@ -636,6 +636,83 @@ int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
     sigar_cache_destroy(chips);
 
     return SIGAR_OK;
+}
+
+/*
+ * Special handling for Joyent SmartOS. If we are not in the global zone, we
+ * want to report CPU stats for the current zone only. In order to keep this
+ * list as similar to the non-Joyent case as possible, we preserve the number
+ * of CPUs (as upstream code may depend on that number for other purposes)
+ * but only populate the first CPU entry with the kstat results. At least on
+ * SmartOS 1.7.2, kstat only reports CPU usage rolled up into a single metric.
+ * The per-CPU stats it reports are for the global zone.
+ *
+ * The implication of this is that any code that depends on accurate numbers
+ * for each actual CPU, this will fail, and we will need to report the number
+ * of CPUs as 1, and only return the zone-wide rolled up stats in that single
+ * CPU entry.
+ */
+static int sigar_cpu_list_get_joyent(sigar_t *sigar, sigar_cpu_list_t *cpulist)
+{
+    kstat_ctl_t *kc = sigar->kc; 
+    kstat_t *ksp;
+    char znm[32];
+    unsigned int i;
+    sigar_cpu_t *cpu;
+
+    if (sigar_kstat_update(sigar) == -1) {
+        return errno;
+    }
+
+    if (cpulist == &sigar->cpulist) {
+        if (sigar->cpulist.size == 0) {
+            /* create once */
+            sigar_cpu_list_create(cpulist);
+        }
+        else {
+            /* reset, re-using cpulist.data */
+            sigar->cpulist.number = 0;
+        }
+    }
+    else {
+        sigar_cpu_list_create(cpulist);
+    }
+
+    strncpy (znm, sigar->zonenm, 30);
+    znm[30] = 0;
+
+    ksp = kstat_lookup (sigar->kc, "zones", -1, znm);
+    if (ksp) {
+      cpu = &cpulist->data[cpulist->number++];
+      SIGAR_ZERO(cpu);
+
+      kstat_read (sigar->kc, ksp, NULL);
+      if (KSTAT_TYPE_NAMED != ksp->ks_type) {
+        return SIGAR_OK;
+      }
+
+      for (i = 0; i < ksp->ks_ndata; i++) {
+        kstat_named_t *kn = &((kstat_named_t *)ksp->ks_data)[i];
+
+        if (strEQ (kn->name, "nsec_sys")) {
+          cpu->sys = kn->value.ui64 / 1000000;
+        } else if (strEQ (kn->name, "nsec_user")) {
+          cpu->user = kn->value.ui64 / 1000000;
+        } else if (strEQ (kn->name, "nsec_waitrq")) {
+          cpu->wait = kn->value.ui64 / 1000000;
+        }
+      }
+    }
+
+    return SIGAR_OK;
+}
+
+int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
+{
+  if (sigar->joyent)
+    return sigar_cpu_list_get_joyent (sigar, cpulist);
+  else
+    return sigar_cpu_list_get_global (sigar, cpulist);
 }
 
 int sigar_uptime_get(sigar_t *sigar,
