@@ -21,7 +21,6 @@ AC_PROG_LN_S
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL([disable-shared static])
-PKG_PROG_PKG_CONFIG
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_MSG_CHECKING([for os type ($host_os)])
