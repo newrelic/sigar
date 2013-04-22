@@ -760,10 +760,6 @@ OS_SOLARIS_FALSE
 VALGRIND
 USE_VALGRIND_TRUE
 USE_VALGRIND_FALSE
-LUA_CFLAGS
-LUA_LIBS
-BUILD_LUA_TRUE
-BUILD_LUA_FALSE
 LIBOBJS
 LTLIBOBJS'
 ac_subst_files=''
@@ -778,9 +774,7 @@ CPPFLAGS
 CPP
 PKG_CONFIG
 PKG_CONFIG_PATH
-PKG_CONFIG_LIBDIR
-LUA_CFLAGS
-LUA_LIBS'
+PKG_CONFIG_LIBDIR'
 
 
 # Initialize some variables set by options.
@@ -1375,7 +1369,6 @@ Optional Packages:
                           both]
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-valgrind=binary  run the tests in valgrind to check for mem-leaks
-  --with-lua              lua
 
 Some influential environment variables:
   CC          C compiler command
@@ -1391,8 +1384,6 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  LUA_CFLAGS  C compiler flags for LUA, overriding pkg-config
-  LUA_LIBS    linker flags for LUA, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -11209,6 +11200,7 @@ CC="$lt_save_CC"
 
 
 
+
 if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
 	if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
@@ -11699,284 +11691,7 @@ else
 fi
 
 
-{ echo "$as_me:$LINENO: checking if with lua" >&5
-echo $ECHO_N "checking if with lua... $ECHO_C" >&6; }
-
-# Check whether --with-lua was given.
-if test "${with_lua+set}" = set; then
-  withval=$with_lua; WITH_LUA=$withval
-else
-  WITH_LUA=no
-fi
-
-
-if test "$WITH_LUA" != "no"; then
- { echo "$as_me:$LINENO: result: $WITH_LUA" >&5
-echo "${ECHO_T}$WITH_LUA" >&6; }
- # try pkgconfig
- if test "$WITH_LUA" = "yes"; then
-    LUAPC=lua
-  else
-    LUAPC=$WITH_LUA
-  fi
-
-
-pkg_failed=no
-{ echo "$as_me:$LINENO: checking for LUA" >&5
-echo $ECHO_N "checking for LUA... $ECHO_C" >&6; }
-
-if test -n "$LUA_CFLAGS"; then
-    pkg_cv_LUA_CFLAGS="$LUA_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"\$LUAPC >= 5.1\"") >&5
-  ($PKG_CONFIG --exists --print-errors "$LUAPC >= 5.1") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  pkg_cv_LUA_CFLAGS=`$PKG_CONFIG --cflags "$LUAPC >= 5.1" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LUA_LIBS"; then
-    pkg_cv_LUA_LIBS="$LUA_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"\$LUAPC >= 5.1\"") >&5
-  ($PKG_CONFIG --exists --print-errors "$LUAPC >= 5.1") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  pkg_cv_LUA_LIBS=`$PKG_CONFIG --libs "$LUAPC >= 5.1" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LUA_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "$LUAPC >= 5.1" 2>&1`
-        else
-	        LUA_PKG_ERRORS=`$PKG_CONFIG --print-errors "$LUAPC >= 5.1" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LUA_PKG_ERRORS" >&5
-
-
-
-pkg_failed=no
-{ echo "$as_me:$LINENO: checking for LUA" >&5
-echo $ECHO_N "checking for LUA... $ECHO_C" >&6; }
-
-if test -n "$LUA_CFLAGS"; then
-    pkg_cv_LUA_CFLAGS="$LUA_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"lua5.1 >= 5.1\"") >&5
-  ($PKG_CONFIG --exists --print-errors "lua5.1 >= 5.1") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  pkg_cv_LUA_CFLAGS=`$PKG_CONFIG --cflags "lua5.1 >= 5.1" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LUA_LIBS"; then
-    pkg_cv_LUA_LIBS="$LUA_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"lua5.1 >= 5.1\"") >&5
-  ($PKG_CONFIG --exists --print-errors "lua5.1 >= 5.1") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  pkg_cv_LUA_LIBS=`$PKG_CONFIG --libs "lua5.1 >= 5.1" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LUA_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "lua5.1 >= 5.1" 2>&1`
-        else
-	        LUA_PKG_ERRORS=`$PKG_CONFIG --print-errors "lua5.1 >= 5.1" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LUA_PKG_ERRORS" >&5
-
-	WITH_LUA=no
-elif test $pkg_failed = untried; then
-     	{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-	WITH_LUA=no
-else
-	LUA_CFLAGS=$pkg_cv_LUA_CFLAGS
-	LUA_LIBS=$pkg_cv_LUA_LIBS
-        { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LUA 1
-_ACEOF
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LUA_H 1
-_ACEOF
-
-
-fi
-
-elif test $pkg_failed = untried; then
-     	{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-
-
-pkg_failed=no
-{ echo "$as_me:$LINENO: checking for LUA" >&5
-echo $ECHO_N "checking for LUA... $ECHO_C" >&6; }
-
-if test -n "$LUA_CFLAGS"; then
-    pkg_cv_LUA_CFLAGS="$LUA_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"lua5.1 >= 5.1\"") >&5
-  ($PKG_CONFIG --exists --print-errors "lua5.1 >= 5.1") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  pkg_cv_LUA_CFLAGS=`$PKG_CONFIG --cflags "lua5.1 >= 5.1" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LUA_LIBS"; then
-    pkg_cv_LUA_LIBS="$LUA_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { (echo "$as_me:$LINENO: \$PKG_CONFIG --exists --print-errors \"lua5.1 >= 5.1\"") >&5
-  ($PKG_CONFIG --exists --print-errors "lua5.1 >= 5.1") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; then
-  pkg_cv_LUA_LIBS=`$PKG_CONFIG --libs "lua5.1 >= 5.1" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LUA_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "lua5.1 >= 5.1" 2>&1`
-        else
-	        LUA_PKG_ERRORS=`$PKG_CONFIG --print-errors "lua5.1 >= 5.1" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LUA_PKG_ERRORS" >&5
-
-	WITH_LUA=no
-elif test $pkg_failed = untried; then
-     	{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-	WITH_LUA=no
-else
-	LUA_CFLAGS=$pkg_cv_LUA_CFLAGS
-	LUA_LIBS=$pkg_cv_LUA_LIBS
-        { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LUA 1
-_ACEOF
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LUA_H 1
-_ACEOF
-
-
-fi
-
-else
-	LUA_CFLAGS=$pkg_cv_LUA_CFLAGS
-	LUA_LIBS=$pkg_cv_LUA_LIBS
-        { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LUA 1
-_ACEOF
-
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LUA_H 1
-_ACEOF
-
-
-fi
-
-
-
-fi
-
- if test "$WITH_LUA" != "no"; then
-  BUILD_LUA_TRUE=
-  BUILD_LUA_FALSE='#'
-else
-  BUILD_LUA_TRUE='#'
-  BUILD_LUA_FALSE=
-fi
-
-
-ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/os/Makefile src/os/aix/Makefile src/os/darwin/Makefile src/os/freebsd/Makefile src/os/hpux/Makefile src/os/linux/Makefile src/os/solaris/Makefile src/os/win32/Makefile examples/Makefile src/sigar_version_autoconf.c tests/Makefile bindings/Makefile bindings/lua/Makefile"
+ac_config_files="$ac_config_files Makefile include/Makefile src/Makefile src/os/Makefile src/os/aix/Makefile src/os/darwin/Makefile src/os/freebsd/Makefile src/os/hpux/Makefile src/os/linux/Makefile src/os/solaris/Makefile src/os/win32/Makefile examples/Makefile src/sigar_version_autoconf.c tests/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -12165,13 +11880,6 @@ if test -z "${USE_VALGRIND_TRUE}" && test -z "${USE_VALGRIND_FALSE}"; then
   { { echo "$as_me:$LINENO: error: conditional \"USE_VALGRIND\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 echo "$as_me: error: conditional \"USE_VALGRIND\" was never defined.
-Usually this means the macro was only invoked conditionally." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-if test -z "${BUILD_LUA_TRUE}" && test -z "${BUILD_LUA_FALSE}"; then
-  { { echo "$as_me:$LINENO: error: conditional \"BUILD_LUA\" was never defined.
-Usually this means the macro was only invoked conditionally." >&5
-echo "$as_me: error: conditional \"BUILD_LUA\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
@@ -12903,8 +12611,6 @@ do
     "examples/Makefile") CONFIG_FILES="$CONFIG_FILES examples/Makefile" ;;
     "src/sigar_version_autoconf.c") CONFIG_FILES="$CONFIG_FILES src/sigar_version_autoconf.c" ;;
     "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
-    "bindings/Makefile") CONFIG_FILES="$CONFIG_FILES bindings/Makefile" ;;
-    "bindings/lua/Makefile") CONFIG_FILES="$CONFIG_FILES bindings/lua/Makefile" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
@@ -13134,15 +12840,11 @@ OS_SOLARIS_FALSE!$OS_SOLARIS_FALSE$ac_delim
 VALGRIND!$VALGRIND$ac_delim
 USE_VALGRIND_TRUE!$USE_VALGRIND_TRUE$ac_delim
 USE_VALGRIND_FALSE!$USE_VALGRIND_FALSE$ac_delim
-LUA_CFLAGS!$LUA_CFLAGS$ac_delim
-LUA_LIBS!$LUA_LIBS$ac_delim
-BUILD_LUA_TRUE!$BUILD_LUA_TRUE$ac_delim
-BUILD_LUA_FALSE!$BUILD_LUA_FALSE$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 36; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 32; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

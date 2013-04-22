@@ -109,36 +109,6 @@ AS_IF([test "x$with_valgrind" != xno],
       ])
 AM_CONDITIONAL(USE_VALGRIND, test "x$VALGRIND" != x)
 
-dnl Check for lua
-AC_MSG_CHECKING(if with lua)
-AC_ARG_WITH(lua, AC_HELP_STRING([--with-lua],[lua]),
-[WITH_LUA=$withval],[WITH_LUA=no])
-
-if test "$WITH_LUA" != "no"; then
- AC_MSG_RESULT($WITH_LUA)
- # try pkgconfig
- if test "$WITH_LUA" = "yes"; then
-    LUAPC=lua
-  else
-    LUAPC=$WITH_LUA
-  fi
-
- PKG_CHECK_MODULES(LUA, $LUAPC >= 5.1, [
-   AC_DEFINE([HAVE_LUA], [1], [liblua])
-   AC_DEFINE([HAVE_LUA_H], [1], [lua.h])
- ],[
-   PKG_CHECK_MODULES(LUA, lua5.1 >= 5.1, [
-     AC_DEFINE([HAVE_LUA], [1], [liblua])
-     AC_DEFINE([HAVE_LUA_H], [1], [lua.h])
-   ],[WITH_LUA=no])
- ])
-
- AC_SUBST(LUA_CFLAGS)
- AC_SUBST(LUA_LIBS)
-fi
-
-AM_CONDITIONAL([BUILD_LUA],[test "$WITH_LUA" != "no"])
-
 AC_CONFIG_FILES([
 Makefile
 include/Makefile
@@ -154,8 +124,6 @@ src/os/win32/Makefile
 examples/Makefile
 src/sigar_version_autoconf.c
 tests/Makefile
-bindings/Makefile
-bindings/lua/Makefile
 ])
 
 AC_OUTPUT

@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = include src bindings examples tests
+SUBDIRS = include src examples tests
 
 EXTRA_DIST=\
 	CMakeLists.txt \
