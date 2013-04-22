@@ -41,11 +41,6 @@ rm -f INSTALL NEWS \
 && rm -f src/Makefile.in \
 && rm -f src/stamp-h1 \
 && rm -f src/stamp-h1.in \
-&& rm -f bindings/Makefile \
-&& rm -f bindings/Makefile.in \
-&& rm -f bindings/lua/Makefile \
-&& rm -f bindings/*/Makefile.in \
-&& rm -f -r bindings/*/.deps \
 && rm -f include/Makefile \
 && rm -f include/Makefile.in \
 && rm -f -r tests/.deps \
