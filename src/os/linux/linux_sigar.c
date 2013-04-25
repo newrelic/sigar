@@ -603,19 +603,9 @@ static SIGAR_INLINE int proc_isthread(sigar_t *sigar, char *pidstr, int len)
 int sigar_os_proc_list_get(sigar_t *sigar,
                            sigar_proc_list_t *proclist)
 {
-    DIR *dirp;
+    DIR *dirp = opendir(PROCP_FS_ROOT);
     struct dirent *ent, dbuf;
     register const int threadbadhack = !sigar->has_nptl;
-
-    sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                     "threadbadhack = %d\n", threadbadhack);
-    sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                     "BEGIN opendir(\"/proc\")\n");
-
-    dirp = opendir(PROCP_FS_ROOT);
-
-    sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                     "END opendir(\"/proc\"): %p\n", dirp);
 
     if (!dirp) {
         return errno;
@@ -625,59 +615,30 @@ int sigar_os_proc_list_get(sigar_t *sigar,
         sigar->proc_signal_offset = get_proc_signal_offset();
     }
 
-    sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                     "BEGIN readdir(%p)\n", dirp);
-
     while (readdir_r(dirp, &dbuf, &ent) == 0) {
-        sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                         "END readdir(%p)\n", dirp);
-
         if (!ent) {
-            sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                             "DONE no ent\n");
             break;
         }
 
         if (!sigar_isdigit(*ent->d_name)) {
-            sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                             "SKIP not a pid\n");
-            sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                             "BEGIN readdir(%p)\n", dirp);
             continue;
         }
 
         if (threadbadhack &&
             proc_isthread(sigar, ent->d_name, strlen(ent->d_name)))
         {
-            sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                             "SKIP smells like a thread\n");
-            sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                             "BEGIN readdir(%p)\n", dirp);
             continue;
         }
 
         /* XXX: more sanity checking */
 
-        sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                         "BEGIN grow proc list\n");
         SIGAR_PROC_LIST_GROW(proclist);
-        sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                         "END grow proc list\n");
 
         proclist->data[proclist->number++] =
             strtoul(ent->d_name, NULL, 10);
-
-        sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                         "BEGIN readdir(%p)\n", dirp);
     }
 
-    sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                     "BEGIN closedir(%p)\n", dirp);
-
     closedir(dirp);
-
-    sigar_log_printf(sigar, SIGAR_LOG_DEBUG,
-                     "END closedir(%p)\n", dirp);
 
     return SIGAR_OK;
 }
