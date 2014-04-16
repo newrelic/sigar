@@ -93,6 +93,25 @@
 
 #define PROC_SIGNAL_IX 38
 
+#if defined(NR_SIGAR_LOGGING)
+static void
+nr_sigar_log_file_line (sigar_t *sigar, int level, const char *buffer)
+{
+  if (buffer && buffer[0]) {
+    char *tmp = strdup (buffer);
+
+    size_t ln = strlen(tmp) - 1;
+    if (tmp[ln] == '\n') {
+      tmp[ln] = '\0';
+    }
+  
+    sigar_log_printf (sigar, level, "  %s", tmp);
+
+    free (tmp);
+  }
+}
+#endif
+
 static int get_proc_signal_offset(void)
 {
     char buffer[BUFSIZ], *ptr=buffer;
@@ -447,11 +466,21 @@ int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
     sigar_cpu_t *cpu;
 
     if (!(fp = fopen(PROC_STAT, "r"))) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "fopen('%s') failed; errno=%d", PROC_STAT, errno);
+#endif
         return errno;
     }
 
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_STAT);
+#endif
+
     /* skip first line */
     (void)fgets(cpu_total, sizeof(cpu_total), fp);
+#if defined(NR_SIGAR_LOGGING)
+    nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, cpu_total);
+#endif
 
     sigar_cpu_list_create(cpulist);
 
@@ -460,6 +489,10 @@ int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
         if (!strnEQ(ptr, "cpu", 3)) {
             break;
         }
+
+#if defined(NR_SIGAR_LOGGING)
+        nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
 
         if (core_rollup && (i % sigar->lcpu)) {
             /* merge times of logical processors */
@@ -477,6 +510,11 @@ int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
     }
 
     fclose(fp);
+
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_STAT);
+#endif
+
 
     if (cpulist->number == 0) {
         /* likely older kernel where cpu\d is not present */
@@ -1200,6 +1238,9 @@ static int get_iostat_sys(sigar_t *sigar,
     int status;
 
     if (!(*iodev = sigar_iodev_get(sigar, dirname))) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "sigar_iodev_get('%s') failed", dirname);
+#endif
         return ENXIO;
     }
 
@@ -1238,10 +1279,18 @@ static int get_iostat_sys(sigar_t *sigar,
         }
     }
 
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", stat);
+#endif
+
     status = sigar_file2str(stat, dev, sizeof(dev));
     if (status != SIGAR_OK) {
         return status;
     }
+
+#if defined(NR_SIGAR_LOGGING)
+    nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, dev);
+#endif
 
     ptr = dev;
     ptr = sigar_skip_token(ptr);
@@ -1252,6 +1301,12 @@ static int get_iostat_sys(sigar_t *sigar,
     disk->read_bytes  = SIGAR_FIELD_NOTIMPL;
     disk->write_bytes = SIGAR_FIELD_NOTIMPL;
     disk->queue       = SIGAR_FIELD_NOTIMPL;
+
+
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", stat);
+#endif
+
 
     return SIGAR_OK;
 }
@@ -1271,6 +1326,9 @@ static int get_iostat_proc_dstat(sigar_t *sigar,
     SIGAR_DISK_STATS_INIT(device_usage);
 
     if (!(*iodev = sigar_iodev_get(sigar, dirname))) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "sigar_iodev_get('%s') failed", dirname);
+#endif
         return ENXIO;
     }
 
@@ -1286,11 +1344,22 @@ static int get_iostat_proc_dstat(sigar_t *sigar,
     }
 
     if (!(fp = fopen(PROC_DISKSTATS, "r"))) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "fopen('%s') failed; errono=%d", PROC_DISKSTATS, errno);
+#endif
         return errno;
     }
 
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_DISKSTATS);
+#endif
+
     while ((ptr = fgets(buffer, sizeof(buffer), fp))) {
         unsigned long major, minor;
+
+#if defined(NR_SIGAR_LOGGING)
+        nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
 
         major = sigar_strtoul(ptr);
         minor = sigar_strtoul(ptr);
@@ -1359,6 +1428,10 @@ static int get_iostat_proc_dstat(sigar_t *sigar,
 
     fclose(fp);
 
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_DISKSTATS);
+#endif
+
     return status;
 }
 
@@ -1373,6 +1446,9 @@ static int get_iostat_procp(sigar_t *sigar,
     struct stat sb;
 
     if (!(*iodev = sigar_iodev_get(sigar, dirname))) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "sigar_iodev_get('%s') failed;", dirname);
+#endif
         return ENXIO;
     }
 
@@ -1388,12 +1464,27 @@ static int get_iostat_procp(sigar_t *sigar,
     }
 
     if (!(fp = fopen(PROC_PARTITIONS, "r"))) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "fopen(%s) failed; errono=%d", PROC_PARTITIONS, errno);
+#endif
         return errno;
     }
 
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_PARTITIONS);
+#endif
+
     (void)fgets(buffer, sizeof(buffer), fp); /* skip header */
+#if defined(NR_SIGAR_LOGGING)
+    nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
+
     while ((ptr = fgets(buffer, sizeof(buffer), fp))) {
         unsigned long major, minor;
+
+#if defined(NR_SIGAR_LOGGING)
+        nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
 
         major = sigar_strtoul(ptr);
         minor = sigar_strtoul(ptr);
@@ -1423,6 +1514,10 @@ static int get_iostat_procp(sigar_t *sigar,
     }
 
     fclose(fp);
+
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_PARTITIONS);
+#endif
 
     return ENOENT;
 }
@@ -1802,15 +1897,33 @@ int sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
     FILE *fp = fopen(PROC_FS_ROOT "net/dev", "r");
     
     if (!fp) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "fopen('%s') failed; errno=%d", PROC_FS_ROOT "net/dev", errno);
+#endif
         return errno;
     }
 
+        
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_FS_ROOT "net/dev");
+#endif
+
     /* skip header */
     fgets(buffer, sizeof(buffer), fp);
+#if defined(NR_SIGAR_LOGGING)
+    nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
     fgets(buffer, sizeof(buffer), fp);
+#if defined(NR_SIGAR_LOGGING)
+    nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
 
     while (fgets(buffer, sizeof(buffer), fp)) {
         char *ptr, *dev;
+
+#if defined(NR_SIGAR_LOGGING)
+        nr_sigar_log_file_line (sigar, SIGAR_LOG_TRACE, buffer);
+#endif
 
         dev = buffer;
         while (isspace(*dev)) {
@@ -1852,6 +1965,10 @@ int sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
     }
 
     fclose(fp);
+
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_FS_ROOT "net/dev");
+#endif
 
     return found ? SIGAR_OK : ENXIO;
 }
