@@ -80,6 +80,7 @@
 #endif
 
 #include "sigar.h"
+#include "sigar_log.h"
 
 #ifndef WIN32
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
@@ -113,14 +114,34 @@ int sigar_statvfs(sigar_t *sigar,
 #endif
 
     if (status != 0) {
+#if defined(NR_SIGAR_LOGGING)
+        sigar_log_printf (sigar, SIGAR_LOG_TRACE, "stat(v)fs('%s') failed; errno=%d", dirname, errno);
+#endif
         return errno;
     }
+
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> '%s'", dirname);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_frsize (fragment size):                        %16llu", (unsigned long long) buf.f_frsize);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_bsize (file system block size):                %16llu", (unsigned long long) buf.f_bsize);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_blocks (size of fs in f_frsize units):         %16llu", (unsigned long long) buf.f_blocks);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_bfree (# free blocks):                         %16llu", (unsigned long long) buf.f_bfree);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_bavail (# free blocks for unprivileged users): %16llu", (unsigned long long) buf.f_bavail);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_files (# inodes):                              %16llu", (unsigned long long) buf.f_files);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_ffree (# free inodes):                         %16llu", (unsigned long long) buf.f_ffree);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_favail (# free inodes for unprivileged users): %16llu", (unsigned long long) buf.f_favail);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_fsid (file system ID):                         %16llu", (unsigned long long) buf.f_fsid);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_flag (mount flags):                            %16llu", (unsigned long long) buf.f_flag);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  f_namemax (maximum filename length):             %16llu", (unsigned long long) buf.f_namemax);
+#endif
+
 
 #ifdef HAVE_STATVFS
     bsize = buf.f_frsize / 512;
 #else
     bsize = buf.f_bsize / 512;
 #endif
+
     val = buf.f_blocks;
     fsusage->total = SIGAR_FS_BLOCKS_TO_BYTES(val, bsize);
     val = buf.f_bfree;
@@ -130,6 +151,19 @@ int sigar_statvfs(sigar_t *sigar,
     fsusage->used  = fsusage->total - fsusage->free;
     fsusage->files = buf.f_files;
     fsusage->free_files = buf.f_ffree;
+
+
+#if defined(NR_SIGAR_LOGGING)
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  bsize:                                           %16llu", (unsigned long long) bsize);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  total:                                           %16llu", (unsigned long long) fsusage->total);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  free:                                            %16llu", (unsigned long long) fsusage->free);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  avail:                                           %16llu", (unsigned long long) fsusage->avail);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  used:                                            %16llu", (unsigned long long) fsusage->used);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  (100.0 * used) / total):                         %16f%%%%", (100.0 * fsusage->used) / fsusage->total);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "  (100.0 * used) / (used + available):             %16f%%%%", (100.0 * fsusage->used) / (fsusage->used + fsusage->avail));
+
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< '%s'", dirname);
+#endif
 
     return SIGAR_OK;
 }

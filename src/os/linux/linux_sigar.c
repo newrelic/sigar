@@ -473,7 +473,7 @@ int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
     }
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_STAT);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> '%s'", PROC_STAT);
 #endif
 
     /* skip first line */
@@ -512,7 +512,7 @@ int sigar_cpu_list_get(sigar_t *sigar, sigar_cpu_list_t *cpulist)
     fclose(fp);
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_STAT);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< '%s'", PROC_STAT);
 #endif
 
 
@@ -1280,7 +1280,7 @@ static int get_iostat_sys(sigar_t *sigar,
     }
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", stat);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> '%s'", stat);
 #endif
 
     status = sigar_file2str(stat, dev, sizeof(dev));
@@ -1304,7 +1304,7 @@ static int get_iostat_sys(sigar_t *sigar,
 
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", stat);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< '%s'", stat);
 #endif
 
 
@@ -1351,7 +1351,7 @@ static int get_iostat_proc_dstat(sigar_t *sigar,
     }
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_DISKSTATS);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> '%s'", PROC_DISKSTATS);
 #endif
 
     while ((ptr = fgets(buffer, sizeof(buffer), fp))) {
@@ -1429,7 +1429,7 @@ static int get_iostat_proc_dstat(sigar_t *sigar,
     fclose(fp);
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_DISKSTATS);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< '%s'", PROC_DISKSTATS);
 #endif
 
     return status;
@@ -1471,7 +1471,7 @@ static int get_iostat_procp(sigar_t *sigar,
     }
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_PARTITIONS);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> '%s'", PROC_PARTITIONS);
 #endif
 
     (void)fgets(buffer, sizeof(buffer), fp); /* skip header */
@@ -1516,7 +1516,7 @@ static int get_iostat_procp(sigar_t *sigar,
     fclose(fp);
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_PARTITIONS);
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< '%s'", PROC_PARTITIONS);
 #endif
 
     return ENOENT;
@@ -1905,7 +1905,7 @@ int sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
 
         
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> %s", PROC_FS_ROOT "net/dev");
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, ">>>>>>>>> '%s'", PROC_FS_ROOT "net/dev");
 #endif
 
     /* skip header */
@@ -1967,7 +1967,7 @@ int sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
     fclose(fp);
 
 #if defined(NR_SIGAR_LOGGING)
-    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< %s", PROC_FS_ROOT "net/dev");
+    sigar_log_printf (sigar, SIGAR_LOG_TRACE, "<<<<<<<<< '%s'", PROC_FS_ROOT "net/dev");
 #endif
 
     return found ? SIGAR_OK : ENXIO;
