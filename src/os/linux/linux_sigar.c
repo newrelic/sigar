@@ -342,7 +342,7 @@ static SIGAR_INLINE sigar_uint64_t sigar_meminfo(char *buffer,
 
 int sigar_mem_get(sigar_t *sigar, sigar_mem_t *mem)
 {
-    sigar_uint64_t buffers, cached, kern;
+    sigar_uint64_t buffers, cached, unused_slab, kern;
     char buffer[BUFSIZ];
 
     int status = sigar_file2str(PROC_MEMINFO,
@@ -358,8 +358,13 @@ int sigar_mem_get(sigar_t *sigar, sigar_mem_t *mem)
 
     buffers = sigar_meminfo(buffer, MEMINFO_PARAM("Buffers"));
     cached  = sigar_meminfo(buffer, MEMINFO_PARAM("Cached"));
+#ifdef SIGAR_LINUX_IGNORE_RECLAIMABLE_SLABS
+    unused_slab = 0;
+#else
+    unused_slab = sigar_meminfo(buffer, MEMINFO_PARAM("SReclaimable"));
+#endif
 
-    kern = buffers + cached;
+    kern = buffers + cached + unused_slab;
     mem->actual_free = mem->free + kern;
     mem->actual_used = mem->used - kern;
 
