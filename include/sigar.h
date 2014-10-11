@@ -122,10 +122,15 @@ typedef gid_t sigar_gid_t;
 #endif
 
 typedef struct sigar_t sigar_t;
+typedef enum _sigar_opt_t {
+    SIGAR_OPT_LINUX_RECLAIMABLE_SLAB_IN_USE = 0x01,
+} sigar_opt_t;
 
 SIGAR_DECLARE(int) sigar_open(sigar_t **sigar);
 
 SIGAR_DECLARE(int) sigar_close(sigar_t *sigar);
+
+SIGAR_DECLARE(void) sigar_set_option(sigar_t *sigar, sigar_opt_t option, int state);
 
 SIGAR_DECLARE(sigar_pid_t) sigar_pid_get(sigar_t *sigar);
 

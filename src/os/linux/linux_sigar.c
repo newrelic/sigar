@@ -358,11 +358,12 @@ int sigar_mem_get(sigar_t *sigar, sigar_mem_t *mem)
 
     buffers = sigar_meminfo(buffer, MEMINFO_PARAM("Buffers"));
     cached  = sigar_meminfo(buffer, MEMINFO_PARAM("Cached"));
-#ifdef SIGAR_LINUX_IGNORE_RECLAIMABLE_SLABS
-    unused_slab = 0;
-#else
-    unused_slab = sigar_meminfo(buffer, MEMINFO_PARAM("SReclaimable"));
-#endif
+    if (sigar->options & SIGAR_OPT_LINUX_RECLAIMABLE_SLAB_IN_USE) {
+        unused_slab = 0;
+    }
+    else {
+        unused_slab = sigar_meminfo(buffer, MEMINFO_PARAM("SReclaimable"));
+    }
 
     kern = buffers + cached + unused_slab;
     mem->actual_free = mem->free + kern;

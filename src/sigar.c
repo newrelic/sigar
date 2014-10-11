@@ -59,9 +59,20 @@ SIGAR_DECLARE(int) sigar_open(sigar_t **sigar)
         (*sigar)->net_listen = NULL;
         (*sigar)->net_services_tcp = NULL;
         (*sigar)->net_services_udp = NULL;
+        (*sigar)->options = 0;
     }
 
     return status;
+}
+
+SIGAR_DECLARE(void) sigar_set_option(sigar_t *sigar, sigar_opt_t option, int state)
+{
+    if (state) {
+        sigar->options |= option;
+    }
+    else {
+        sigar->options &= ~((int) option);
+    }
 }
 
 SIGAR_DECLARE(int) sigar_close(sigar_t *sigar)
