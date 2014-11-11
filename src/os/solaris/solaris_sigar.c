@@ -175,6 +175,25 @@ int sigar_os_open(sigar_t **sig)
     SIGAR_ZERO(&sigar->mib2);
     sigar->mib2.sd = -1;
 
+    sigar->zone_cpu_cap = 100;
+    sigar->zone_cpu_div = 1.0;
+
+    if (sigar->zoneid) {
+      sprintf (zonenm, "cpucaps_zone_%llu", (unsigned long long)sigar->zoneid);
+      ksp = kstat_lookup (sigar->kc, "caps", -1, zonenm);
+      if (ksp) {
+        for (i = 0; i < ksp->ks_ndata; i++) {
+          kstat_named_t *kn = &((kstat_named_t *)ksp->ks_data)[i];
+
+          if ((strEQ (kn->name, "value")) && (kn->value.i32 != 0)) {
+            sigar->zone_cpu_cap = (int)kn->value.i32;
+            sigar->zone_cpu_div = (double)sigar->zone_cpu_cap / 100.0;
+            break;
+          }
+        }
+      }
+    }
+
     return SIGAR_OK;
 }
 
@@ -695,11 +714,11 @@ static int sigar_cpu_list_get_joyent(sigar_t *sigar, sigar_cpu_list_t *cpulist)
         kstat_named_t *kn = &((kstat_named_t *)ksp->ks_data)[i];
 
         if (strEQ (kn->name, "nsec_sys")) {
-          cpu->sys = kn->value.ui64 / 1000000;
+          cpu->sys = (sigar_uint64_t)((double)((kn->value.ui64 / 1000000)) / sigar->zone_cpu_div);
         } else if (strEQ (kn->name, "nsec_user")) {
-          cpu->user = kn->value.ui64 / 1000000;
+          cpu->user = (sigar_uint64_t)((double)((kn->value.ui64 / 1000000)) / sigar->zone_cpu_div);;
         } else if (strEQ (kn->name, "nsec_waitrq")) {
-          cpu->wait = kn->value.ui64 / 1000000;
+          cpu->wait = (sigar_uint64_t)((double)((kn->value.ui64 / 1000000)) / sigar->zone_cpu_div);;
         }
       }
     }

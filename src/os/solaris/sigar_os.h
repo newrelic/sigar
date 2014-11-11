@@ -138,6 +138,8 @@ struct sigar_t {
     zoneid_t zoneid;
     char *zonenm;
     char *zonenm_short;
+    int zone_cpu_cap;
+    double zone_cpu_div;
 
     kstat_ctl_t *kc;
 
