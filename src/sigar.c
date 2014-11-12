@@ -59,7 +59,7 @@ SIGAR_DECLARE(int) sigar_open(sigar_t **sigar)
         (*sigar)->net_listen = NULL;
         (*sigar)->net_services_tcp = NULL;
         (*sigar)->net_services_udp = NULL;
-        (*sigar)->options = 0;
+        (*sigar)->options = SIGAR_OPT_LINUX_RECLAIMABLE_SLAB_IN_USE;
     }
 
     return status;
