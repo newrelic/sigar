@@ -181,7 +181,7 @@ int sigar_os_open(sigar_t **sig)
     if (sigar->zoneid) {
       sprintf (zonenm, "cpucaps_zone_%llu", (unsigned long long)sigar->zoneid);
       ksp = kstat_lookup (sigar->kc, "caps", -1, zonenm);
-      if (ksp) {
+      if (ksp && (kstat_read (sigar->kc, ksp, NULL) != -1)) {
         for (i = 0; i < ksp->ks_ndata; i++) {
           kstat_named_t *kn = &((kstat_named_t *)ksp->ks_data)[i];
 
@@ -700,6 +700,8 @@ static int sigar_cpu_list_get_joyent(sigar_t *sigar, sigar_cpu_list_t *cpulist)
     strncpy (znm, sigar->zonenm, 30);
     znm[30] = 0;
 
+    sigar_log_printf(sigar, SIGAR_LOG_TRACE, "[cpu_cap] cap=%d div=%f", sigar->zone_cpu_cap, sigar->zone_cpu_div);
+
     ksp = kstat_lookup (sigar->kc, "zones", -1, znm);
     if (ksp) {
       cpu = &cpulist->data[cpulist->number++];
@@ -714,10 +716,13 @@ static int sigar_cpu_list_get_joyent(sigar_t *sigar, sigar_cpu_list_t *cpulist)
         kstat_named_t *kn = &((kstat_named_t *)ksp->ks_data)[i];
 
         if (strEQ (kn->name, "nsec_sys")) {
+          sigar_log_printf(sigar, SIGAR_LOG_TRACE, "[cpu] nsec_sys=%llu", kn->value.ui64);
           cpu->sys = (sigar_uint64_t)((double)((kn->value.ui64 / 1000000)) / sigar->zone_cpu_div);
         } else if (strEQ (kn->name, "nsec_user")) {
+          sigar_log_printf(sigar, SIGAR_LOG_TRACE, "[cpu] nsec_user=%llu", kn->value.ui64);
           cpu->user = (sigar_uint64_t)((double)((kn->value.ui64 / 1000000)) / sigar->zone_cpu_div);;
         } else if (strEQ (kn->name, "nsec_waitrq")) {
+          sigar_log_printf(sigar, SIGAR_LOG_TRACE, "[cpu] nsec_waitrq=%llu", kn->value.ui64);
           cpu->wait = (sigar_uint64_t)((double)((kn->value.ui64 / 1000000)) / sigar->zone_cpu_div);;
         }
       }
