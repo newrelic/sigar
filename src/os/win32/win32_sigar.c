@@ -122,15 +122,24 @@ typedef enum {
                          sigar->perfbuf, \
                          &bytes))
 
-#define PERF_VAL(ix) \
-    perf_offsets[ix] ? \
-        *((DWORD *)((BYTE *)counter_block + perf_offsets[ix])) : 0
+#define PERF_VAL(dest, ix) \
+    if (!counters[ix] || counters[ix]->CounterSize == 4) { \
+        (dest) = (perf_offsets[ix] ? \
+            *((DWORD *)((BYTE *)counter_block + perf_offsets[ix])) : 0); \
+    } else { \
+        (dest) = (perf_offsets[ix] ? \
+            *((ULONGLONG *)((BYTE *)counter_block + perf_offsets[ix])) : 0); \
+    }
 
 /* 1/100ns units to milliseconds */
 #define NS100_2MSEC(t) ((t) / 10000)
 
-#define PERF_VAL_CPU(ix) \
-    NS100_2MSEC(PERF_VAL(ix))
+#define PERF_VAL_CPU(dest, ix) \
+    { \
+        sigar_uint64_t _perf_val_cpu_temp; \
+        PERF_VAL (_perf_val_cpu_temp, ix); \
+        NS100_2MSEC(_perf_val_cpu_temp); \
+    }
 
 #define MS_LOOPBACK_ADAPTER "Microsoft Loopback Adapter"
 #define NETIF_LA "la"
@@ -816,6 +825,7 @@ SIGAR_DECLARE(int) sigar_swap_get(sigar_t *sigar, sigar_swap_t *swap)
 
 static PERF_INSTANCE_DEFINITION *get_cpu_instance(sigar_t *sigar,
                                                   DWORD *perf_offsets,
+                                                  PERF_COUNTER_DEFINITION **counters,
                                                   DWORD *num, DWORD *err)
 {
     PERF_OBJECT_TYPE *object = get_perf_object(sigar, PERF_TITLE_CPU_KEY, err);
@@ -834,15 +844,19 @@ static PERF_INSTANCE_DEFINITION *get_cpu_instance(sigar_t *sigar,
 
         switch (counter->CounterNameTitleIndex) {
           case PERF_TITLE_CPU_SYS:
+            counters[PERF_IX_CPU_SYS] = counter;
             perf_offsets[PERF_IX_CPU_SYS] = offset;
             break;
           case PERF_TITLE_CPU_USER:
+            counters[PERF_IX_CPU_USER] = counter;
             perf_offsets[PERF_IX_CPU_USER] = offset;
             break;
           case PERF_TITLE_CPU_IDLE:
+            counters[PERF_IX_CPU_IDLE] = counter;
             perf_offsets[PERF_IX_CPU_IDLE] = offset;
             break;
           case PERF_TITLE_CPU_IRQ:
+            counters[PERF_IX_CPU_IRQ] = counter;
             perf_offsets[PERF_IX_CPU_IRQ] = offset;
             break;
         }
@@ -862,13 +876,14 @@ static PERF_INSTANCE_DEFINITION *get_cpu_instance(sigar_t *sigar,
 
 static int get_idle_cpu(sigar_t *sigar, sigar_cpu_t *cpu,
                         DWORD idx,
+                        PERF_COUNTER_DEFINITION **counters,
                         PERF_COUNTER_BLOCK *counter_block,
                         DWORD *perf_offsets)
 {
     cpu->idle = 0;
 
     if (perf_offsets[PERF_IX_CPU_IDLE]) {
-        cpu->idle = PERF_VAL_CPU(PERF_IX_CPU_IDLE);
+        PERF_VAL_CPU(cpu->idle, PERF_IX_CPU_IDLE);
     }
     else {
         /* windows NT and 2000 do not have an Idle counter */
@@ -912,11 +927,13 @@ static int sigar_cpu_perflib_get(sigar_t *sigar, sigar_cpu_t *cpu)
     PERF_INSTANCE_DEFINITION *inst;
     PERF_COUNTER_BLOCK *counter_block;
     DWORD perf_offsets[PERF_IX_CPU_MAX], err;
+    PERF_COUNTER_DEFINITION *counters[PERF_IX_CPU_MAX];
 
     SIGAR_ZERO(cpu);
     memset(&perf_offsets, 0, sizeof(perf_offsets));
+    memset (counters, 0, sizeof(counters));
 
-    inst = get_cpu_instance(sigar, (DWORD*)&perf_offsets, 0, &err);
+    inst = get_cpu_instance(sigar, (DWORD*)&perf_offsets, counters, 0, &err);
 
     if (!inst) {
         return err;
@@ -925,10 +942,10 @@ static int sigar_cpu_perflib_get(sigar_t *sigar, sigar_cpu_t *cpu)
     /* first instance is total, rest are per-cpu */
     counter_block = PdhGetCounterBlock(inst);
 
-    cpu->sys  = PERF_VAL_CPU(PERF_IX_CPU_SYS);
-    cpu->user = PERF_VAL_CPU(PERF_IX_CPU_USER);
-    status = get_idle_cpu(sigar, cpu, -1, counter_block, perf_offsets);
-    cpu->irq = PERF_VAL_CPU(PERF_IX_CPU_IRQ);
+    PERF_VAL_CPU(cpu->sys, PERF_IX_CPU_SYS);
+    PERF_VAL_CPU(cpu->user, PERF_IX_CPU_USER);
+    status = get_idle_cpu(sigar, cpu, -1, counters, counter_block, perf_offsets);
+    PERF_VAL_CPU(cpu->irq, PERF_IX_CPU_IRQ);
     cpu->nice = 0; /* no nice here */
     cpu->wait = 0; /*N/A?*/
     cpu->total = cpu->sys + cpu->user + cpu->idle + cpu->wait + cpu->irq;
@@ -986,12 +1003,13 @@ static int sigar_cpu_list_perflib_get(sigar_t *sigar,
     DWORD i;
     PERF_INSTANCE_DEFINITION *inst;
     DWORD perf_offsets[PERF_IX_CPU_MAX], num, err;
+    PERF_COUNTER_DEFINITION *counters[PERF_IX_CPU_MAX];
     int core_rollup = sigar_cpu_core_rollup(sigar);
 
     memset(&perf_offsets, 0, sizeof(perf_offsets));
 
     /* first instance is total, rest are per-cpu */
-    inst = get_cpu_instance(sigar, (DWORD*)&perf_offsets, &num, &err);
+    inst = get_cpu_instance(sigar, (DWORD*)&perf_offsets, counters, &num, &err);
 
     if (!inst) {
         return err;
@@ -1013,6 +1031,7 @@ static int sigar_cpu_list_perflib_get(sigar_t *sigar,
     for (i=0; i<num; i++) {
         PERF_COUNTER_BLOCK *counter_block;
         sigar_cpu_t *cpu;
+        sigar_uint64_t temp;
 
         if (core_rollup && (i % sigar->lcpu)) {
             /* merge times of logical processors */
@@ -1026,10 +1045,13 @@ static int sigar_cpu_list_perflib_get(sigar_t *sigar,
 
         counter_block = PdhGetCounterBlock(inst);
 
-        cpu->sys  += PERF_VAL_CPU(PERF_IX_CPU_SYS);
-        cpu->user += PERF_VAL_CPU(PERF_IX_CPU_USER);
-        cpu->irq  += PERF_VAL_CPU(PERF_IX_CPU_IRQ);
-        get_idle_cpu(sigar, cpu, i, counter_block, perf_offsets);
+        PERF_VAL_CPU(temp, PERF_IX_CPU_SYS);
+        cpu->sys += temp;
+        PERF_VAL_CPU(temp, PERF_IX_CPU_USER);
+        cpu->user += temp;
+        PERF_VAL_CPU(temp, PERF_IX_CPU_IRQ);
+        cpu->irq += temp;
+        get_idle_cpu(sigar, cpu, i, counters, counter_block, perf_offsets);
         cpu->nice = cpu->wait = 0; /*N/A*/
 
         /*XXX adding up too much here if xeon, but not using this atm*/
@@ -1164,8 +1186,10 @@ static int sigar_proc_list_get_perf(sigar_t *sigar,
     PERF_COUNTER_DEFINITION *counter;
     DWORD i, err;
     DWORD perf_offsets[PERF_IX_MAX];
+    PERF_COUNTER_DEFINITION *counters[PERF_IX_MAX];
 
     perf_offsets[PERF_IX_PID] = 0;
+    counters[PERF_IX_PID] = NULL;
 
     object = get_process_object(sigar, &err);
 
@@ -1189,6 +1213,7 @@ static int sigar_proc_list_get_perf(sigar_t *sigar,
 
         switch (counter->CounterNameTitleIndex) {
           case PERF_TITLE_PID:
+            counters[PERF_IX_PID] = counter;
             perf_offsets[PERF_IX_PID] = offset;
             break;
         }
@@ -1199,7 +1224,9 @@ static int sigar_proc_list_get_perf(sigar_t *sigar,
          i++, inst = PdhNextInstance(inst))
     {
         PERF_COUNTER_BLOCK *counter_block = PdhGetCounterBlock(inst);
-        DWORD pid = PERF_VAL(PERF_IX_PID);
+        DWORD pid;
+        
+        PERF_VAL(pid, PERF_IX_PID);
 
         if (pid == 0) {
             continue; /* dont include the system Idle process */
@@ -1488,6 +1515,7 @@ static int get_proc_info(sigar_t *sigar, sigar_pid_t pid)
     PERF_COUNTER_DEFINITION *counter;
     DWORD i, err;
     DWORD perf_offsets[PERF_IX_MAX];
+    PERF_COUNTER_DEFINITION *counters[PERF_IX_MAX];
     sigar_win32_pinfo_t *pinfo = &sigar->pinfo;
     time_t timenow = time(NULL);
 
@@ -1524,33 +1552,43 @@ static int get_proc_info(sigar_t *sigar, sigar_pid_t pid)
 
         switch (counter->CounterNameTitleIndex) {
           case PERF_TITLE_CPUTIME:
+            counters[PERF_IX_CPUTIME] = counter;
             perf_offsets[PERF_IX_CPUTIME] = offset;
             break;
           case PERF_TITLE_PAGE_FAULTS:
+            counters[PERF_IX_PAGE_FAULTS] = counter;
             perf_offsets[PERF_IX_PAGE_FAULTS] = offset;
             break;
           case PERF_TITLE_MEM_VSIZE:
+            counters[PERF_IX_MEM_VSIZE] = counter;
             perf_offsets[PERF_IX_MEM_VSIZE] = offset;
             break;
           case PERF_TITLE_MEM_SIZE:
+            counters[PERF_IX_MEM_SIZE] = counter;
             perf_offsets[PERF_IX_MEM_SIZE] = offset;
             break;
           case PERF_TITLE_THREAD_CNT:
+            counters[PERF_IX_THREAD_CNT] = counter;
             perf_offsets[PERF_IX_THREAD_CNT] = offset;
             break;
           case PERF_TITLE_HANDLE_CNT:
+            counters[PERF_IX_HANDLE_CNT] = counter;
             perf_offsets[PERF_IX_HANDLE_CNT] = offset;
             break;
           case PERF_TITLE_PID:
+            counters[PERF_IX_PID] = counter;
             perf_offsets[PERF_IX_PID] = offset;
             break;
           case PERF_TITLE_PPID:
+            counters[PERF_IX_PPID] = counter;
             perf_offsets[PERF_IX_PPID] = offset;
             break;
           case PERF_TITLE_PRIORITY:
+            counters[PERF_IX_PRIORITY] = counter;
             perf_offsets[PERF_IX_PRIORITY] = offset;
             break;
           case PERF_TITLE_START_TIME:
+            counters[PERF_IX_START_TIME] = counter;
             perf_offsets[PERF_IX_START_TIME] = offset;
             break;
         }
@@ -1563,7 +1601,9 @@ static int get_proc_info(sigar_t *sigar, sigar_pid_t pid)
         HANDLE hprocess;
         PROCESS_MEMORY_COUNTERS_EX mem_counters;
         PERF_COUNTER_BLOCK *counter_block = PdhGetCounterBlock(inst);
-        sigar_pid_t this_pid = PERF_VAL(PERF_IX_PID);
+        sigar_pid_t this_pid;
+        
+        PERF_VAL(this_pid, PERF_IX_PID);
 
         if (this_pid != pid) {
             continue;
@@ -1584,10 +1624,10 @@ static int get_proc_info(sigar_t *sigar, sigar_pid_t pid)
 
         pinfo->size     = mem_counters.PrivateUsage;
         pinfo->resident = mem_counters.WorkingSetSize;
-        pinfo->ppid     = PERF_VAL(PERF_IX_PPID);
-        pinfo->priority = PERF_VAL(PERF_IX_PRIORITY);
-        pinfo->handles  = PERF_VAL(PERF_IX_HANDLE_CNT);
-        pinfo->threads  = PERF_VAL(PERF_IX_THREAD_CNT);
+        PERF_VAL(pinfo->ppid, PERF_IX_PPID);
+        PERF_VAL(pinfo->priority, PERF_IX_PRIORITY);
+        PERF_VAL(pinfo->handles, PERF_IX_HANDLE_CNT);
+        PERF_VAL(pinfo->threads, PERF_IX_THREAD_CNT);
         pinfo->page_faults = mem_counters.PageFaultCount;
 
         return SIGAR_OK;
@@ -2090,6 +2130,7 @@ SIGAR_DECLARE(int) sigar_file_system_list_get(sigar_t *sigar,
 
 static PERF_INSTANCE_DEFINITION *get_disk_instance(sigar_t *sigar,
                                                    DWORD *perf_offsets,
+                                                   PERF_COUNTER_DEFINITION **counters,
                                                    DWORD *num, DWORD *err)
 {
     PERF_OBJECT_TYPE *object =
@@ -2113,51 +2154,62 @@ static PERF_INSTANCE_DEFINITION *get_disk_instance(sigar_t *sigar,
         switch (counter->CounterNameTitleIndex) {
           case PERF_TITLE_DISK_TIME:
             if (!have_time_numerator) {
+                counters[PERF_IX_DISK_TIME_NUMERATOR] = counter;
                 perf_offsets[PERF_IX_DISK_TIME_NUMERATOR] = offset;
                 have_time_numerator = TRUE;
             }
             else {
+                counters[PERF_IX_DISK_TIME_DENOMINATOR] = counter;
                 perf_offsets[PERF_IX_DISK_TIME_DENOMINATOR] = offset;
             }
             found = 1;
             break;
           case PERF_TITLE_DISK_READ_TIME:
             if (!have_read_time_numerator) {
+                counters[PERF_IX_DISK_READ_TIME_NUMERATOR] = counter;
                 perf_offsets[PERF_IX_DISK_READ_TIME_NUMERATOR] = offset;
                 have_read_time_numerator = TRUE;
             }
             else {
+                counters[PERF_IX_DISK_READ_TIME_DENOMINATOR] = counter;
                 perf_offsets[PERF_IX_DISK_READ_TIME_DENOMINATOR] = offset;
             }
             found = 1;
             break;
           case PERF_TITLE_DISK_WRITE_TIME:
             if (!have_write_time_numerator) {
+                counters[PERF_IX_DISK_WRITE_TIME_NUMERATOR] = counter;
                 perf_offsets[PERF_IX_DISK_WRITE_TIME_NUMERATOR] = offset;
                 have_write_time_numerator = TRUE;
             }
             else {
+                counters[PERF_IX_DISK_WRITE_TIME_DENOMINATOR] = counter;
                 perf_offsets[PERF_IX_DISK_WRITE_TIME_DENOMINATOR] = offset;
             }
             found = 1;
             break;
           case PERF_TITLE_DISK_READ:
+            counters[PERF_IX_DISK_READ] = counter;
             perf_offsets[PERF_IX_DISK_READ] = offset;
             found = 1;
             break;
           case PERF_TITLE_DISK_WRITE:
+            counters[PERF_IX_DISK_WRITE] = counter;
             perf_offsets[PERF_IX_DISK_WRITE] = offset;
             found = 1;
             break;
           case PERF_TITLE_DISK_READ_BYTES:
+            counters[PERF_IX_DISK_READ_BYTES] = counter;
             perf_offsets[PERF_IX_DISK_READ_BYTES] = offset;
             found = 1;
             break;
           case PERF_TITLE_DISK_WRITE_BYTES:
+            counters[PERF_IX_DISK_WRITE_BYTES] = counter;
             perf_offsets[PERF_IX_DISK_WRITE_BYTES] = offset;
             found = 1;
             break;
           case PERF_TITLE_DISK_QUEUE:
+            counters[PERF_IX_DISK_QUEUE] = counter;
             perf_offsets[PERF_IX_DISK_QUEUE] = offset;
             found = 1;
             break;
@@ -2185,6 +2237,7 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
         get_perf_object(sigar, PERF_TITLE_DISK_KEY, &err);
     PERF_INSTANCE_DEFINITION *inst;
     DWORD perf_offsets[PERF_IX_DISK_MAX];
+    PERF_COUNTER_DEFINITION *counters[PERF_IX_DISK_MAX];
     /* LARGE_INTEGER freq = object->PerfFreq; */
 
     SIGAR_DISK_STATS_INIT(disk);
@@ -2194,7 +2247,7 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
     }
 
     memset(&perf_offsets, 0, sizeof(perf_offsets));
-    inst = get_disk_instance(sigar, (DWORD*)&perf_offsets, 0, &err);
+    inst = get_disk_instance(sigar, (DWORD*)&perf_offsets, counters, 0, &err);
 
     if (!inst) {
         return err;
@@ -2223,14 +2276,22 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
         }
 
         if (strnEQ(drive, dirname, 2)) {
-            disk->time   = NS100_2MSEC(PERF_VAL(PERF_IX_DISK_TIME_NUMERATOR));
-            disk->rtime  = NS100_2MSEC(PERF_VAL(PERF_IX_DISK_READ_TIME_NUMERATOR));
-            disk->wtime  = NS100_2MSEC(PERF_VAL(PERF_IX_DISK_WRITE_TIME_NUMERATOR));
-            disk->reads  = PERF_VAL(PERF_IX_DISK_READ);
-            disk->writes = PERF_VAL(PERF_IX_DISK_WRITE);
-            disk->read_bytes  = PERF_VAL(PERF_IX_DISK_READ_BYTES);
-            disk->write_bytes = PERF_VAL(PERF_IX_DISK_WRITE_BYTES);
-            disk->queue = PERF_VAL(PERF_IX_DISK_QUEUE);
+            sigar_uint64_t temp;
+
+            PERF_VAL(temp, PERF_IX_DISK_TIME_NUMERATOR);
+            disk->time   = NS100_2MSEC(temp);
+
+            PERF_VAL(temp, PERF_IX_DISK_READ_TIME_NUMERATOR);
+            disk->rtime  = NS100_2MSEC(temp);
+
+            PERF_VAL(temp, PERF_IX_DISK_WRITE_TIME_NUMERATOR);
+            disk->wtime  = NS100_2MSEC(temp);
+
+            PERF_VAL(disk->reads, PERF_IX_DISK_READ);
+            PERF_VAL(disk->writes, PERF_IX_DISK_WRITE);
+            PERF_VAL(disk->read_bytes, PERF_IX_DISK_READ_BYTES);
+            PERF_VAL(disk->write_bytes, PERF_IX_DISK_WRITE_BYTES);
+            PERF_VAL(disk->queue, PERF_IX_DISK_QUEUE);
             return SIGAR_OK;
         }
     }
